@@ -27,7 +27,17 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="participants-section">
               <h5>Participantes inscritos:</h5>
               <ul class="participants-list">
-                ${details.participants.map(p => `<li>${p}</li>`).join('')}
+                ${details.participants.map(p => `
+                  <li class="participant-item">
+                    <span class="participant-email">${p}</span>
+                    <button class="delete-participant-btn" title="Eliminar" data-activity="${name}" data-email="${p}">
+                      <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="10" cy="10" r="10" fill="#f44336"/>
+                        <path d="M6 6l8 8M14 6l-8 8" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                  </li>
+                `).join('')}
               </ul>
             </div>
           `;
@@ -49,6 +59,30 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
 
         activitiesList.appendChild(activityCard);
+
+        // Delegación de eventos para eliminar participante
+        activityCard.addEventListener('click', async (e) => {
+          if (e.target.closest && e.target.closest('.delete-participant-btn')) {
+            const btn = e.target.closest('.delete-participant-btn');
+            const activityName = btn.getAttribute('data-activity');
+            const email = btn.getAttribute('data-email');
+            if (confirm(`¿Eliminar a ${email} de "${activityName}"?`)) {
+              try {
+                const response = await fetch(`/activities/${encodeURIComponent(activityName)}/unregister?email=${encodeURIComponent(email)}`, {
+                  method: 'POST',
+                });
+                if (response.ok) {
+                  fetchActivities();
+                } else {
+                  const result = await response.json();
+                  alert(result.detail || 'No se pudo eliminar el participante.');
+                }
+              } catch (err) {
+                alert('Error de red al eliminar participante.');
+              }
+            }
+          }
+        });
 
         // Add option to select dropdown
         const option = document.createElement("option");
@@ -83,6 +117,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        // Refrescar actividades para mostrar el nuevo participante
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
